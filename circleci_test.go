@@ -898,3 +898,103 @@ func TestClient_AddHerokuKey(t *testing.T) {
 		t.Errorf("Client.AddHerokuKey(53433a12-9c99-11e5-97f5-1458d009721) returned error: %v", err)
 	}
 }
+
+func TestClient_ListTokens(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/project/jszwedko/foo/token", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		fmt.Fprintf(w, `[{
+            "label" : "zuzu",
+            "token" : "5866ee007782e319ccd7911eda34cab5dceee655",
+            "scope" : "view-builds"
+        }]`)
+	})
+
+	tokens, err := client.ListTokens("jszwedko", "foo")
+	if err != nil {
+		t.Errorf("Client.ListCheckoutKeys(jszwedko, foo) returned error: %v", err)
+	}
+
+	want := []*Token{{
+		Label: "zuzu",
+		Token: "5866ee007782e319ccd7911eda34cab5dceee655",
+		Scope: "view-builds",
+	}}
+	if !reflect.DeepEqual(tokens, want) {
+		t.Errorf("Client.ListTokens(jszwedko, foo) returned %+v, want %+v", tokens, want)
+	}
+}
+
+func TestClient_CreateToken(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/project/jszwedko/foo/token", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "POST")
+		testBody(t, r, `{"scope":"view-builds","label":"zuzu"}`)
+		fmt.Fprintf(w, `{
+            "label" : "zuzu",
+            "token" : "5866ee007782e319ccd7911eda34cab5dceee655",
+            "scope" : "view-builds"
+        }`)
+	})
+
+	token, err := client.CreateToken("jszwedko", "foo", "zuzu", "view-builds")
+	if err != nil {
+		t.Errorf("Client.CreateToken(jszwedko, foo, zuzu, view-builds) returned error: %v", err)
+	}
+
+	want := &Token{
+		Label: "zuzu",
+		Token: "5866ee007782e319ccd7911eda34cab5dceee655",
+		Scope: "view-builds",
+	}
+	if !reflect.DeepEqual(token, want) {
+		t.Errorf("Client.Client.CreateToken(jszwedko, foo, zuzu, view-builds) returned %+v, want %+v", token, want)
+	}
+}
+
+func TestClient_GetToken(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/project/jszwedko/foo/token/5866ee007782e319ccd7911eda34cab5dceee655", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		fmt.Fprintf(w, `{
+            "label" : "zuzu",
+            "token" : "5866ee007782e319ccd7911eda34cab5dceee655",
+            "scope" : "view-builds"
+		}`)
+	})
+
+	token, err := client.GetToken("jszwedko", "foo", "5866ee007782e319ccd7911eda34cab5dceee655")
+	if err != nil {
+		t.Errorf("Client.GetToken(jszwedko, foo, 5866ee007782e319ccd7911eda34cab5dceee655) returned error: %v", err)
+	}
+
+	want := &Token{
+		Label: "zuzu",
+		Token: "5866ee007782e319ccd7911eda34cab5dceee655",
+		Scope: "view-builds",
+	}
+	if !reflect.DeepEqual(token, want) {
+		t.Errorf("Client.GetCheckoutKey(jszwedko, foo, 5866ee007782e319ccd7911eda34cab5dceee655) returned %+v, want %+v", token, want)
+	}
+}
+
+func TestClient_DeleteToken(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/project/jszwedko/foo/token/5866ee007782e319ccd7911eda34cab5dceee655", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "DELETE")
+		fmt.Fprintf(w, `{"message": "ok"}`)
+	})
+
+	err := client.DeleteToken("jszwedko", "foo", "5866ee007782e319ccd7911eda34cab5dceee655")
+	if err != nil {
+		t.Errorf("Client.DeleteToken(jszwedko, foo, 5866ee007782e319ccd7911eda34cab5dceee655) returned error: %v", err)
+	}
+}

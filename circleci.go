@@ -557,6 +557,55 @@ func (c *Client) AddHerokuKey(key string) error {
 	return c.request("POST", "/user/heroku-key", nil, nil, body)
 }
 
+// ListTokens fetches the API keys associated with the given project
+func (c *Client) ListTokens(account, repo string) ([]*Token, error) {
+	tokens := []*Token{}
+
+	err := c.request("GET", fmt.Sprintf("project/%s/%s/token", account, repo), &tokens, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return tokens, nil
+}
+
+// CreateToken creates a new token for a project
+// Valid scopes are currently status, view-builds and all
+func (c *Client) CreateToken(account, repo, label, scope string) (*Token, error) {
+	token := &Token{}
+	body := struct {
+		Scope string `json:"scope"`
+		Label string `json:"label"`
+	}{
+		Scope: scope,
+		Label: label,
+	}
+
+	err := c.request("POST", fmt.Sprintf("project/%s/%s/token", account, repo), &token, nil, body)
+	if err != nil {
+		return nil, err
+	}
+
+	return token, nil
+}
+
+// GetToken fetches the token details for the given project
+func (c *Client) GetToken(account, repo, token string) (*Token, error) {
+	t := &Token{}
+
+	err := c.request("GET", fmt.Sprintf("project/%s/%s/token/%s", account, repo, token), &t, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return t, nil
+}
+
+// DeleteToken deletes the token for the given project
+func (c *Client) DeleteToken(account, repo, token string) error {
+	return c.request("DELETE", fmt.Sprintf("project/%s/%s/token/%s", account, repo, token), nil, nil, nil)
+}
+
 // EnvVar represents an environment variable
 type EnvVar struct {
 	Name  string `json:"name"`
@@ -853,4 +902,12 @@ type CheckoutKey struct {
 	Login       *string   `json:"login"` // github username if this is a user key
 	Preferred   bool      `json:"preferred"`
 	Time        time.Time `json:"time"` // time key was created
+}
+
+// Token represents a project specific API token
+type Token struct {
+	Label string    `json:"label"`
+	Token string    `json:"token"`
+	Scope string    `json:"scope"` // status or view-builds or all
+	Time  time.Time `json:"time"`
 }
